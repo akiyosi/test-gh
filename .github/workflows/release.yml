@@ -35,7 +35,7 @@ jobs:
     - name: Retrieve version
       id: version-linux
       run: |
-        cd ${{ github.workspace }}/src/github.com/${{ github.repository }}
+        cd ./${{ github.repository }}
         echo "::set-output name=GONEOVIM_VERSION::$(git describe --tags)"
 
     - name: test version
