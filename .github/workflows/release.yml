@@ -40,6 +40,7 @@ jobs:
 
     - name: test version
       run: |
+        cd ./${{ github.repository }}
         git tag
         echo ${{ steps.version-linux.outputs.GONEOVIM_VERSION }}
 
