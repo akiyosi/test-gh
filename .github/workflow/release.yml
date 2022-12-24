@@ -1,0 +1,90 @@
+name: Release
+on: 
+  schedule:
+    - cron: '0 2 * * *' # run at 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for release'
+        required: false
+        default: nightly
+  push:
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+
+env:
+  cache-version: v8
+
+jobs:
+
+
+  linux:
+    strategy:
+      matrix:
+        go-version: [1.18.x]
+        platform: [ubuntu-latest] #, windows-latest]
+        qtversion: [5.15.6]
+    runs-on: ${{ matrix.platform }}
+    steps:
+
+
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        path: ./src/github.com/${{ github.repository }}
+
+    - name: Retrieve version
+      id: version-linux
+      run: |
+        cd ${{ github.workspace }}/src/github.com/${{ github.repository }}
+        echo "::set-output name=GONEOVIM_VERSION::$(git describe --tags)"
+
+  publish:
+    needs: [linux]
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base
+
+      - if: github.event_name == 'workflow_dispatch'
+        run: echo "TAG_NAME=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
+      - if: github.event_name == 'schedule'
+        run: echo 'TAG_NAME=nightly' >> $GITHUB_ENV
+      - if: github.event_name == 'push'
+        run: |
+          TAG_NAME=${{ github.ref }}
+          echo "TAG_NAME=${TAG_NAME#refs/tags/}" >> $GITHUB_ENV
+
+      - if: env.TAG_NAME == 'nightly'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          (echo 'SUBJECT=TEST Nightly build';
+           echo 'PRERELEASE=--prerelease') >> $GITHUB_ENV
+          gh release delete nightly --yes || true
+          git push origin :nightly || true
+
+      - if: env.TAG_NAME != 'nightly'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          (echo "SUBJECT=TEST $TAG_NAME";
+           echo 'PRERELEASE=') >> $GITHUB_ENV
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create $TAG_NAME $PRERELEASE --title "$SUBJECT" 
+
+
