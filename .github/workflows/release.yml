@@ -31,8 +31,6 @@ jobs:
       with:
         fetch-depth: 0
         path: ./src/github.com/${{ github.repository }}
-      run: |
-        git tag
 
     - name: Retrieve version
       id: version-linux
@@ -42,6 +40,7 @@ jobs:
 
     - name: test version
       run: |
+        git tag
         echo ${{ steps.version-linux.outputs.GONEOVIM_VERSION }}
 
   publish:
