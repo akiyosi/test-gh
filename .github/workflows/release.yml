@@ -19,6 +19,7 @@ jobs:
 
 
   linux:
+    if: ${{ false }}
     strategy:
       matrix:
         go-version: [1.18.x]
